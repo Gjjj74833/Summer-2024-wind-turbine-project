@@ -58,18 +58,18 @@ def gen_turbulence(v_bar, L, k_sigma_v, T_s, t_final, white_noise,
 
     # Step 3: Generate the turbulence component in the interval using convolution
     N_t = int(t_final / T_s)
-    v_t = np.zeros(N_t + 1)
+    v_t = np.zeros(N_t)
     
     # Zero-pad the white noise 
     white_noise_padded = np.pad(white_noise, (0, N), 'constant')
     
-    for m in range(N_t + 1):
+    for m in range(N_t):
         v_t[m] = T_s * np.sum(h * white_noise_padded[m : m + N + 1])
     
     v = v_bar + sigma_v * v_t
     
     plt.figure()
-    plt.plot(np.arange(N_t + 1) * T_s, v)
+    plt.plot(np.arange(N_t) * T_s, v)
     plt.title('Wind Speed with Turbulence v(t)')
     plt.xlabel('Time (s)')
     plt.ylabel('v(t)')
@@ -91,7 +91,7 @@ def N_selection(L, v_bar, T_s, delta_omega, M, N):
     
     
     h = np.zeros(N + 1)
-    for k in range(N + 1):
+    for k in range(N+1):
         h[k] = T_s * delta_omega * (2/np.pi) * np.sum(P * np.cos(k * np.arange(M + 1) * T_s * delta_omega))
     K_hat_F = T_s * np.sum(h)
 
@@ -111,17 +111,22 @@ def N_selection(L, v_bar, T_s, delta_omega, M, N):
     plt.grid(True)
     plt.show()
     
-    print(K_hat_F-K_F)
+    print(K_hat_F, K_F)
         
     
 
-t_final = 600
+t_final = 180
 T_s = 1
 N_t = int(t_final / T_s)
-white_noise = np.random.randn(N_t + 1)
-v = gen_turbulence(20, 360, 0.12, T_s, t_final, white_noise, delta_omega = 0.001, M = 10000)
+
+
+state_before = np.random.get_state()
+np.random.seed(7619098)
+white_noise = np.random.randn(N_t)
+np.random.set_state(state_before)
+v = gen_turbulence(20, 180, 0.13, T_s, t_final, white_noise)
     
-#N_selection(360, 20, 1, 0.001, 10000, 80)
+#N_selection(180, 20, 1, 0.001, 10000, 100)
     
     
     

@@ -79,7 +79,7 @@ def generate_frequencies(N=9, k_range=(-3, 2), base=10):
         frequencies.extend([i * (base**k) for i in range(1, N + 1)])
     return frequencies
 
-def simulate_wind_speed(T_s1, T_F, v_bar):
+def get_median_long_component(T_s1, T_F, v_bar, white_noise):
     """
     Simulate the medium- and long-term wind speed component.
 
@@ -91,6 +91,10 @@ def simulate_wind_speed(T_s1, T_F, v_bar):
         Total simulation time (seconds)
     v_bar : float
         Mean wind speed
+    white_noise : np.array
+        white noise should be uniform distribution from -pi to pi 
+        with length equal to the length of frequency array. 
+        Here this length is 31
 
     Returns
     -------
@@ -100,7 +104,7 @@ def simulate_wind_speed(T_s1, T_F, v_bar):
     frequencies = generate_frequencies()[:31]
     omegas = np.array(frequencies) * 2 * np.pi   # Convert cycles/hour to rad/hour
     amplitudes = []
-    phases = np.random.uniform(-np.pi, np.pi, size=len(omegas))
+    #phases = np.random.uniform(-np.pi, np.pi, size=len(omegas))
     
     # Calculate amplitudes using the Van der Hoven spectrum
     for i in range(len(omegas) - 1):
@@ -112,7 +116,7 @@ def simulate_wind_speed(T_s1, T_F, v_bar):
     
     amplitudes = np.array(amplitudes)
     
-    wind_size = int(T_F / T_s1)
+    wind_size = int(np.ceil(T_F / T_s1))
     wind_speeds = np.full(wind_size, v_bar, dtype=float)
 
     
@@ -120,7 +124,7 @@ def simulate_wind_speed(T_s1, T_F, v_bar):
     for t in range(wind_size):
         # at time t, for each frequency
         for i in range(len(amplitudes)):
-            wind_speeds[t] += amplitudes[i]*np.cos(omegas[i]*t + phases[i])
+            wind_speeds[t] += amplitudes[i]*np.cos(omegas[i]*t + white_noise[i])
     
     return wind_speeds
 
@@ -141,10 +145,10 @@ def gen_turbulence(v_bar, L, k_sigma_v, T_s, N_t, white_noise,
         Slope parameter
     T_s : int
         Time step
-    t_final : int
-        Sampling time interval
+    N_t : int
+        Number of time steps
     white_noise : np.array
-        the white noise with mean = 0 and std = 1, has length 
+        the white noise with mean = 0 and std = 1, has length N_t
 
     Returns
     -------
@@ -175,70 +179,74 @@ def gen_turbulence(v_bar, L, k_sigma_v, T_s, N_t, white_noise,
         h[k] = T_s * delta_omega * (2/np.pi) * np.sum(P * np.cos(k * np.arange(M + 1) * T_s * delta_omega))
     
     # Step 3: Generate the turbulence component in the interval using convolution
-    v_t = np.zeros(N_t + 1)
+    v_t = np.zeros(N_t)
     
     # Zero-pad the white noise 
     white_noise_padded = np.pad(white_noise, (0, N), 'constant')
     
-    for m in range(N_t + 1):
+    for m in range(N_t):
         v_t[m] = T_s * np.sum(h * white_noise_padded[m : m + N + 1])
     
     return v_bar + sigma_v * v_t
     
-
-def generate_turbulent_wind_speeds(v_bar_array, L, k_sigma_v, T_s, T_s1, white_noise):
+def generate_wind(v_bar, L, k_sigma_v, T_s, T_s1, T_F, white_noise_ml, white_noise_turb):
     """
     Generate wind speed with turbulence for each average wind speed in the array.
 
     Parameters
     ----------
-    v_bar_array : np.array
-        Array of average wind speeds
+    v_bar : float
+        Mean wind speed
     L : float
         Turbulence length scale
     k_sigma_v : float
         Slope parameter
-    T_s : float
+    T_s : int
         Time step (sampling period)
-    T_s1 : float
+    T_s1 : int
         Duration for each average wind speed
-    white_noise : np.array
-        The white noise with mean = 0 and std = 1
+    T_F : int
+        Total simulation time
+    white_noise_ml : np.array
+        White noise array for medium-long term component
+    white_noise_turb : np.array
+        White noise array for turbulence component
 
     Returns
     -------
     np.array
         Large array of wind speeds with turbulence
     """
+    # Generate medium-long term component
+    v_ml = get_median_long_component(T_s1, T_F, v_bar, white_noise_ml)
+    
     large_wind_speed_array = []
     
-    for v_bar in v_bar_array:
+    for i in range(len(v_ml)):
         N_t = int(T_s1 / T_s)
-        white_noise_segment = np.random.normal(0, 1, 2 * N_t + 1)
-        wind_with_turbulence = gen_turbulence(v_bar, L, k_sigma_v, T_s, N_t, white_noise_segment)
+        white_noise_segment = white_noise_turb[i * N_t : (i + 1)* N_t]
+        wind_with_turbulence = gen_turbulence(v_ml[i], L, k_sigma_v, T_s, N_t, white_noise_segment)
         large_wind_speed_array.extend(wind_with_turbulence)
     
-    return np.array(large_wind_speed_array)
+    return np.array(large_wind_speed_array), v_ml
     
 
+
+# Parameters
 T_s1 = 180  # Sampling period (seconds)
-T_total = 50 * 3600  # Total simulation time (5 hours in seconds)
-v_bar = 10  # Mean wind speed (m/s)
+T_total = 2300  # Total simulation time (seconds)
+v_bar = 11  # Mean wind speed (m/s)
 
-
-L = 360  # Turbulence length scale in meters
-k_sigma_v = 0.16  # Slope parameter
+L = 180  # Turbulence length scale in meters
+k_sigma_v = 0.13 # Slope parameter
 T_s = 1  # Time step in seconds
- # Duration for each average wind speed in seconds
 
 # Generate white noise for each segment
-white_noise_length = 2 * int(T_s1 / T_s) + 1
+white_noise_ml = np.random.uniform(-np.pi, np.pi, 31)  # For phase in medium-long term
+white_noise_turb = np.random.normal(0, 1, int(np.ceil(T_total / T_s1) * T_s1))  # For turbulence component
 
 # Generate large array of wind speeds with turbulence
-v_ml = simulate_wind_speed(T_s1, T_total, v_bar)
-wind_speeds = generate_turbulent_wind_speeds(v_ml, L, k_sigma_v, T_s, T_s1, white_noise_length)
-
-
+wind_speeds, v_ml = generate_wind(v_bar, L, k_sigma_v, T_s, T_s1, T_total, white_noise_ml, white_noise_turb)
 
 # Plot the simulated wind speeds
 plt.plot(np.arange(0, len(wind_speeds), T_s), wind_speeds, 'b-', linewidth=0.5, label='Wind Speed')
@@ -247,10 +255,6 @@ plt.ylabel('Wind Speed (m/s)')
 plt.title('Wind Speed')
 plt.grid(True)
 plt.show()
-
-
-
-
 
 
 
