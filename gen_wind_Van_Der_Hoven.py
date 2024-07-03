@@ -234,16 +234,33 @@ def generate_wind(v_bar, L, k_sigma_v, T_s, T_s1, T_F, white_noise_ml, white_noi
 
 # Parameters
 T_s1 = 180  # Sampling period (seconds)
-T_total = 2300  # Total simulation time (seconds)
-v_bar = 11  # Mean wind speed (m/s)
+T_total = 2000  # Total simulation time (seconds)
+v_bar = 20  # Mean wind speed (m/s)
 
 L = 180  # Turbulence length scale in meters
 k_sigma_v = 0.13 # Slope parameter
 T_s = 1  # Time step in seconds
 
 # Generate white noise for each segment
-white_noise_ml = np.random.uniform(-np.pi, np.pi, 31)  # For phase in medium-long term
+import random
+seeds = [random.randint(0, 9999999) for _ in range(3)]
+#seeds = [6668902, 7679329, 3083145]
+# Print the list of random numbers
+print(seeds)
+# generate medium long component noise use the first seed
+state_before = np.random.get_state()
+np.random.seed(seeds[0])
+white_noise_ml = np.random.uniform(-np.pi, np.pi, 31) 
+np.random.set_state(state_before)
+
+# generate turbulence noise use the second seed
+state_before = np.random.get_state()
+np.random.seed(seeds[1])
 white_noise_turb = np.random.normal(0, 1, int(np.ceil(T_total / T_s1) * T_s1))  # For turbulence component
+np.random.set_state(state_before)
+
+#white_noise_ml = np.random.uniform(-np.pi, np.pi, 31)  # For phase in medium-long term
+#white_noise_turb = np.random.normal(0, 1, int(np.ceil(T_total / T_s1) * T_s1))  # For turbulence component
 
 # Generate large array of wind speeds with turbulence
 wind_speeds, v_ml = generate_wind(v_bar, L, k_sigma_v, T_s, T_s1, T_total, white_noise_ml, white_noise_turb)
@@ -255,7 +272,6 @@ plt.ylabel('Wind Speed (m/s)')
 plt.title('Wind Speed')
 plt.grid(True)
 plt.show()
-
 
 
 
