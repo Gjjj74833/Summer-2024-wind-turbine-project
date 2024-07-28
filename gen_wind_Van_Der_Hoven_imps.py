@@ -1,3 +1,5 @@
+
+
 # -*- coding: utf-8 -*-
 """
 Created on Thu May  9 21:26:25 2024
@@ -79,7 +81,7 @@ def generate_frequencies(N=9, k_range=(-3, 2), base=10):
         frequencies.extend([i * (base**k) for i in range(1, N + 1)])
     return frequencies
 
-def get_median_long_component(T_s1, T_F, v_bar, white_noise):
+def get_median_long_component(T_s1, T_F, v_bar, sampling_noise, sampling_seed):
     """
     Simulate the medium- and long-term wind speed component.
 
@@ -101,6 +103,13 @@ def get_median_long_component(T_s1, T_F, v_bar, white_noise):
     np.array
         Simulated wind speeds over time.
     """
+    state_before = np.random.get_state()
+    np.random.seed(sampling_seed)
+    sampling_source = np.random.uniform(-np.pi, np.pi, 31) 
+    np.random.set_state(state_before)
+    
+    white_noise = sampling_source + sampling_noise
+    
     frequencies = generate_frequencies()[:31]
     omegas = np.array(frequencies) * 2 * np.pi   # Convert cycles/hour to rad/hour
     amplitudes = []
@@ -124,9 +133,9 @@ def get_median_long_component(T_s1, T_F, v_bar, white_noise):
     for t in range(wind_size):
         # at time t, for each frequency
         for i in range(len(amplitudes)):
-            wind_speeds[t] += amplitudes[i]*np.cos(omegas[i]*t + white_noise[i])
+            wind_speeds[t] += amplitudes[i]*np.cos(omegas[i]*t*T_s1/3600 + white_noise[i])
     
-    return wind_speeds
+    return np.clip(wind_speeds, 1, 40)
 
 
 
@@ -189,7 +198,7 @@ def gen_turbulence(v_bar, L, k_sigma_v, T_s, N_t, white_noise,
     
     return v_bar + sigma_v * v_t
     
-def generate_wind(v_bar, L, k_sigma_v, T_s, T_s1, T_F, white_noise_ml, white_noise_turb):
+def generate_wind(v_bar, L, k_sigma_v, T_s, T_s1, T_F, white_noise_ml, white_noise_turb, sampling_seed):
     """
     Generate wind speed with turbulence for each average wind speed in the array.
 
@@ -218,7 +227,7 @@ def generate_wind(v_bar, L, k_sigma_v, T_s, T_s1, T_F, white_noise_ml, white_noi
         Large array of wind speeds with turbulence
     """
     # Generate medium-long term component
-    v_ml = get_median_long_component(T_s1, T_F, v_bar, white_noise_ml)
+    v_ml = get_median_long_component(T_s1, T_F, v_bar, white_noise_ml, sampling_seed)
     
     large_wind_speed_array = []
     
@@ -230,47 +239,9 @@ def generate_wind(v_bar, L, k_sigma_v, T_s, T_s1, T_F, white_noise_ml, white_noi
     
     return np.array(large_wind_speed_array), v_ml
     
-'''
 
-# Parameters
-T_s1 = 180  # Sampling period (seconds)
-T_total = 2000  # Total simulation time (seconds)
-v_bar = 20  # Mean wind speed (m/s)
 
-L = 180  # Turbulence length scale in meters
-k_sigma_v = 0.13 # Slope parameter
-T_s = 1  # Time step in seconds
 
-# Generate white noise for each segment
-import random
-seeds = [random.randint(0, 9999999) for _ in range(3)]
-#seeds = [6668902, 7679329, 3083145]
-# Print the list of random numbers
-print(seeds)
-# generate medium long component noise use the first seed
-state_before = np.random.get_state()
-np.random.seed(seeds[0])
-white_noise_ml = np.random.uniform(-np.pi, np.pi, 31) 
-np.random.set_state(state_before)
 
-# generate turbulence noise use the second seed
-state_before = np.random.get_state()
-np.random.seed(seeds[1])
-white_noise_turb = np.random.normal(0, 1, int(np.ceil(T_total / T_s1) * T_s1))  # For turbulence component
-np.random.set_state(state_before)
 
-#white_noise_ml = np.random.uniform(-np.pi, np.pi, 31)  # For phase in medium-long term
-#white_noise_turb = np.random.normal(0, 1, int(np.ceil(T_total / T_s1) * T_s1))  # For turbulence component
 
-# Generate large array of wind speeds with turbulence
-wind_speeds, v_ml = generate_wind(v_bar, L, k_sigma_v, T_s, T_s1, T_total, white_noise_ml, white_noise_turb)
-
-# Plot the simulated wind speeds
-plt.plot(np.arange(0, len(wind_speeds), T_s), wind_speeds, 'b-', linewidth=0.5, label='Wind Speed')
-plt.xlabel('Time (s)')
-plt.ylabel('Wind Speed (m/s)')
-plt.title('Wind Speed')
-plt.grid(True)
-plt.show()
-
-'''
