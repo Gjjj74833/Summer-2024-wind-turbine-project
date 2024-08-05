@@ -999,7 +999,7 @@ def reproduce_save_driver(seeds):
 
 
     v_w = 11
-    end_time = 1500 #end_time < 3000
+    end_time = 2000 #end_time < 3000
     
     seeds_wind = seeds[:2]
     seed_wave = seeds[2]
@@ -1110,15 +1110,15 @@ def load_data(seeds):
         # plot 7 states
         #for j in range(7):
         for j in range(6):
-            ax[j+2].plot(t, max_state[:,j], alpha=0.6, color='green', linewidth=0.5)
-            ax[j+2].plot(t, min_state[:,j], alpha=0.6, color='orange', linewidth=0.5)
+            #ax[j+2].plot(t, max_state[:,j], alpha=0.6, color='green', linewidth=0.5)
+            #ax[j+2].plot(t, min_state[:,j], alpha=0.6, color='orange', linewidth=0.5)
 
             ax[j+2].plot(t, state[:, j], color='black', linewidth=0.5)
             ax[j+2].set_xlabel('Time (s)', fontsize=12)
             
-            ax[j+2].fill_between(t, percentile_12_5[:, j], percentile_87_5[:, j], color='b', alpha=0.3, edgecolor='none')
-            ax[j+2].fill_between(t, percentile_37_5[:, j], percentile_62_5[:, j], color='b', alpha=0.3, edgecolor='none')
-            ax[j+2].plot(t, percentile_50[:, j], color='r', alpha=0.9, linewidth=0.5)
+            #ax[j+2].fill_between(t, percentile_12_5[:, j], percentile_87_5[:, j], color='b', alpha=0.3, edgecolor='none')
+            #ax[j+2].fill_between(t, percentile_37_5[:, j], percentile_62_5[:, j], color='b', alpha=0.3, edgecolor='none')
+            #ax[j+2].plot(t, percentile_50[:, j], color='r', alpha=0.9, linewidth=0.5)
             
             ax[j+2].set_title(state_names[j], fontsize=15)
             ax[j+2].grid(True)
@@ -1175,16 +1175,16 @@ def load_data(seeds):
         
         ax[9].tick_params(axis='both', labelsize=16) 
         
-        ax[10].plot(t, T_E, color='black', linewidth=0.5)
+        ax[10].plot(t, T_E/1000, color='black', linewidth=0.5)
         ax[10].set_xlabel('Time (s)', fontsize=12)
-        ax[10].set_title("Generator Torque (N*m)", fontsize=15)
+        ax[10].set_title("Generator Torque (kN*m)", fontsize=15)
         ax[10].grid(True)
         ax[10].set_xlim(0, t[-1])
         ax[10].tick_params(axis='both', labelsize=16) 
         
         ax[11].plot(t, P_A, color='black', linewidth=0.5)
         ax[11].set_xlabel('Time (s)', fontsize=12)
-        ax[11].set_title("Generator Power (W)", fontsize=15)
+        ax[11].set_title("Generator Power (MW)", fontsize=15)
         ax[11].grid(True)
         ax[11].set_xlim(0, t[-1])
         ax[11].tick_params(axis='both', labelsize=16) 
@@ -1343,7 +1343,23 @@ seeds = [6488224, 7121293, 7613170]
 seeds = [6285672, 9524948, 5121805]
 seeds = [5514118, 2491094, 6244421]
 
-#reproduce_save_driver(seeds)
+# explore surge
+# original surge with 11 m/s
+seeds = [5922703, 7807870, 9240304]
+# modify U19.5 = 20
+#seeds = [5922703, 7807870, 9240304]
+
+# original with 20m/s
+#seeds = [2836000, 1339842, 6889157]
+#seeds = [1785999, 1854122, 8235867]
+seeds = [5563693, 5004676, 9608067]
+
+# more than 10 surge
+seeds = [372690, 8343741, 5323847]
+seeds = [7951375, 1141030, 3022793]
+seeds = [8734247, 7239128, 3868119]
+
+reproduce_save_driver(seeds)
 
 
 

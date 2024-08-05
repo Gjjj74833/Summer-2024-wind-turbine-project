@@ -124,7 +124,7 @@ def get_median_long_component(T_s1, T_F, v_bar, white_noise):
     for t in range(wind_size):
         # at time t, for each frequency
         for i in range(len(amplitudes)):
-            wind_speeds[t] += amplitudes[i]*np.cos(omegas[i]*t + white_noise[i])
+            wind_speeds[t] += amplitudes[i]*np.cos(omegas[i]*t*T_s1/3600 + white_noise[i])
     
     return wind_speeds
 
@@ -230,11 +230,11 @@ def generate_wind(v_bar, L, k_sigma_v, T_s, T_s1, T_F, white_noise_ml, white_noi
     
     return np.array(large_wind_speed_array), v_ml
     
-'''
+
 
 # Parameters
 T_s1 = 180  # Sampling period (seconds)
-T_total = 2000  # Total simulation time (seconds)
+T_total = 1000  # Total simulation time (seconds)
 v_bar = 20  # Mean wind speed (m/s)
 
 L = 180  # Turbulence length scale in meters
@@ -273,4 +273,3 @@ plt.title('Wind Speed')
 plt.grid(True)
 plt.show()
 
-'''
