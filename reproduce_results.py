@@ -598,7 +598,7 @@ def structure(x_1, beta, omega_R, t, Cp_type, performance, v_w, v_aveg, random_p
     
     #avegQ_t = np.sqrt(Qt_zeta**2+Qt_eta**2)/8
 
-    return np.linalg.inv(E) @ F, v_in, Cp, h_wave - h
+    return np.linalg.inv(E) @ F, v_in, Cp, h_wave - h, FA
 
 
 
@@ -682,11 +682,11 @@ def Betti(x, t, beta, T_E, Cp_type, performance, v_w, v_aveg, random_phases):
     x1 = x[:6]
     omega_R = x[6]
     
-    dx1dt, v_in, Cp, h_wave = structure(x1, beta, omega_R, t, Cp_type, performance, v_w, v_aveg, random_phases)
+    dx1dt, v_in, Cp, h_wave, FA = structure(x1, beta, omega_R, t, Cp_type, performance, v_w, v_aveg, random_phases)
     dx2dt = WindTurbine(omega_R, v_in, beta, T_E, t, Cp)
     dxdt = np.append(dx1dt, dx2dt)
 
-    return dxdt, h_wave
+    return dxdt, h_wave, FA
 
 
 def rk4(Betti, x0, t0, tf, dt, beta_0, T_E, Cp_type, performance, v_w, v_wind, seed_wave, v_ml, T_s1):
@@ -883,10 +883,11 @@ def rk4(Betti, x0, t0, tf, dt, beta_0, T_E, Cp_type, performance, v_w, v_wind, s
     wave_eta = []
     T_E_list = []
     P_A_list = []
+    FA_list = []
     for i in range(n - 1):
         betas.append(beta)
         v_average_ml = v_ml[i // int((T_s1 / dt))]
-        k1, h_wave = Betti(x[i], t[i], beta, T_E, Cp_type, performance, v_wind[i],  v_average_ml, random_phases)
+        k1, h_wave, FA = Betti(x[i], t[i], beta, T_E, Cp_type, performance, v_wind[i],  v_average_ml, random_phases)
         k2 = Betti(x[i] + 0.5 * dt * k1, t[i] + 0.5 * dt, beta, T_E, Cp_type, performance, v_wind[i],  v_average_ml, random_phases)[0]
         k3 = Betti(x[i] + 0.5 * dt * k2, t[i] + 0.5 * dt, beta, T_E, Cp_type, performance, v_wind[i],  v_average_ml, random_phases)[0]
         k4 = Betti(x[i] + dt * k3, t[i] + dt, beta, T_E, Cp_type, performance, v_wind[i],  v_average_ml, random_phases)[0]
@@ -898,10 +899,12 @@ def rk4(Betti, x0, t0, tf, dt, beta_0, T_E, Cp_type, performance, v_w, v_wind, s
         wave_eta.append(h_wave)
         T_E_list.append(T_E)
         P_A_list.append(T_E*97*x[i][6])
+        FA_list.append(FA/1000)
         
     T_E_list.append(T_E_list[-1])
     P_A_list.append(P_A_list[-1])
     wave_eta.append(wave_eta[-1])
+    FA_list.append(FA_list[-1])
     
     
     x[:, 4] = -np.rad2deg(x[:, 4])
@@ -930,8 +933,9 @@ def rk4(Betti, x0, t0, tf, dt, beta_0, T_E, Cp_type, performance, v_w, v_wind, s
     betas_sub = betas[::steps]#[discard_steps:]
     T_E_list_sub = T_E_list[::steps]#[discard_steps:]
     P_A_list_sub = P_A_list[::steps]#[discard_steps:]
+    FA_list_sub = FA_list[::steps]
     
-    return t_sub-t_sub[0], x_sub, v_wind_sub, wave_eta_sub, betas_sub, T_E_list_sub, P_A_list_sub
+    return t_sub-t_sub[0], x_sub, v_wind_sub, wave_eta_sub, betas_sub, T_E_list_sub, P_A_list_sub, FA_list_sub
 
 
 def main(end_time, v_w, x0, seeds_wind, seed_wave, time_step = 0.05, Cp_type = 0, T_s1 = 180):
@@ -987,10 +991,10 @@ def main(end_time, v_w, x0, seeds_wind, seed_wave, time_step = 0.05, Cp_type = 0
     #v_wind = np.load(f'reproduced_results/turbsim_output/{seeds[0]}_{seeds[1]}.npy')
     # modify this to change run time and step size
     #[Betti, x0 (initial condition), start time, end time, time step, beta, T_E]
-    t, x, v_wind, wave_eta, betas, T_E, P_A = rk4(Betti, x0, start_time, end_time, time_step, 0.32, 43093.55, Cp_type, performance, v_w, v_wind, seed_wave, v_ml, T_s1)
+    t, x, v_wind, wave_eta, betas, T_E, P_A, FA = rk4(Betti, x0, start_time, end_time, time_step, 0.32, 43093.55, Cp_type, performance, v_w, v_wind, seed_wave, v_ml, T_s1)
 
     # return the output to be ploted
-    return t, x, v_wind, wave_eta, betas, T_E, P_A
+    return t, x, v_wind, wave_eta, betas, T_E, P_A, FA
 
 
 
@@ -999,7 +1003,7 @@ def reproduce_save_driver(seeds):
 
 
     v_w = 11
-    end_time = 2000 #end_time < 3000
+    end_time = 1500 #end_time < 3000
     
     seeds_wind = seeds[:2]
     seed_wave = seeds[2]
@@ -1012,7 +1016,7 @@ def reproduce_save_driver(seeds):
                      0.00147344971, 
                      -0.000391112846, 
                      1.26855822])
-    t, x, v_wind, wave_eta, betas, T_E, P_A = main(end_time, v_w, x0, seeds_wind, seed_wave)
+    t, x, v_wind, wave_eta, betas, T_E, P_A, FA = main(end_time, v_w, x0, seeds_wind, seed_wave)
     end_time -= 500
     
     np.savez(f'reproduced_results/data/{seeds[0]}_{seeds[1]}_{seeds[2]}.npz', 
@@ -1022,7 +1026,8 @@ def reproduce_save_driver(seeds):
                                                     wave_eta=wave_eta, 
                                                     betas=betas,
                                                     T_E=T_E,
-                                                    P_A=P_A)
+                                                    P_A=P_A,
+                                                    FA=FA)
     
 
 #####################################################################################
@@ -1043,13 +1048,15 @@ def load_data(seeds):
     t = data['t'][:-1]#[:-1000]
     state = data['x'][:-1]#[:-1000]
     beta = np.rad2deg(data['betas'])#[:-1000]
-    x = data['x'][:-1][:-1000]
+    x = data['x'][:-1]#[:-1000]
     wind_speed = data['v_wind'][:-1]#[:-1000]
     wave_eta = data['wave_eta'][:-1]#[:-1000]
     T_E = data['T_E'][:-1]#[:-1000]
     P_A = data['P_A'][:-1]#[:-1000]
+    FA = data['FA'][:-1]
     data.close()
     print(np.std(state[:,4]))
+    print(np.max(state[:,0]))
     
     '''
     pitch_rate = x[:, 5]  
@@ -1079,7 +1086,7 @@ def load_data(seeds):
     
     ######################################################################
     state_names = ['Surge (m)', 'Surge Velocity (m/s)', 'Heave (m)', 'Heave Velocity (m/s)', 
-                   'Pitch Angle (deg)', 'Pitch Rate (deg/s)', 'Pitch Acceleration (deg/s^2)', 'Rotor Speed (rpm)']
+                   'Pitch Angle (deg)', 'Pitch Rate (deg/s)', 'Rotor Speed (rpm)']
 
 
     
@@ -1107,24 +1114,42 @@ def load_data(seeds):
         ax[1].set_xlim(0, t[-1])
         
         
+        
+        
         # plot 7 states
         #for j in range(7):
-        for j in range(6):
+        for j in range(4):
             #ax[j+2].plot(t, max_state[:,j], alpha=0.6, color='green', linewidth=0.5)
             #ax[j+2].plot(t, min_state[:,j], alpha=0.6, color='orange', linewidth=0.5)
 
-            ax[j+2].plot(t, state[:, j], color='black', linewidth=0.5)
+            ax[j+2].plot(t, state[:, j*2], color='black', linewidth=0.5)
             ax[j+2].set_xlabel('Time (s)', fontsize=12)
             
-            #ax[j+2].fill_between(t, percentile_12_5[:, j], percentile_87_5[:, j], color='b', alpha=0.3, edgecolor='none')
-            #ax[j+2].fill_between(t, percentile_37_5[:, j], percentile_62_5[:, j], color='b', alpha=0.3, edgecolor='none')
-            #ax[j+2].plot(t, percentile_50[:, j], color='r', alpha=0.9, linewidth=0.5)
+            if j != 3:
+                ax[j+2].fill_between(t, percentile_12_5[:, j*2], percentile_87_5[:, j*2], color='b', alpha=0.3, edgecolor='none')
+                ax[j+2].fill_between(t, percentile_37_5[:, j*2], percentile_62_5[:, j*2], color='b', alpha=0.3, edgecolor='none')
+                ax[j+2].plot(t, percentile_50[:, j*2], color='r', alpha=0.9, linewidth=0.5)
             
-            ax[j+2].set_title(state_names[j], fontsize=15)
+            ax[j+2].set_title(state_names[j*2], fontsize=15)
             ax[j+2].grid(True)
             ax[j+2].set_xlim(0, t[-1])
             
             ax[j+2].tick_params(axis='both', labelsize=16) 
+            
+        ax[6].plot(t, FA, color='black', linewidth=0.5)
+        ax[6].set_xlabel('Time (s)', fontsize=12)
+        ax[6].set_title('Rotor Thrust (kN)', fontsize=15)
+        ax[6].grid(True)
+        ax[6].set_xlim(0, t[-1])
+        ax[6].tick_params(axis='both', labelsize=16) 
+        
+        legend_elements = [Line2D([0], [0], color='black', lw=1, alpha=1, label='Sample Trajectory'),
+                           Line2D([0], [0], color='r', lw=1, alpha=0.9, label='Median'),
+                           Line2D([0], [0], color='b', lw=8, alpha=0.6, label='Central 25th Percentile'),
+                           Line2D([0], [0], color='b', lw=8, alpha=0.3, label='Central 75th Percentile'),]
+        
+        ax[7].legend(handles=legend_elements, loc='center', fontsize=25)
+        ax[7].axis('off')
         '''
             
         # plot pitch    
@@ -1153,6 +1178,7 @@ def load_data(seeds):
         ax[4].legend(handles=legend_elements, loc='center', fontsize=13)
         ax[5].axis('off')
         ax[4].axis('off')
+        '''
         '''
         
         ax[8].plot(t, state[:, -1], color='black', linewidth=0.5)
@@ -1198,12 +1224,12 @@ def load_data(seeds):
                            Line2D([0], [0], color='b', lw=8, alpha=0.3, label='Central 75th Percentile'),]
         
         ax[12].legend(handles=legend_elements, loc='center', fontsize=25)
-        
+        '''
     
     # for 8 states including pitch acceleration:
 
     # create subplots for each simulation index in max_occ_sim
-    fig_max_occ, ax_max_occ = plt.subplots(7, 2, figsize=(12, 22.2))
+    fig_max_occ, ax_max_occ = plt.subplots(2, 4, figsize=(24, 6))
     ax_max_occ = ax_max_occ.flatten()
     
     plot_helper(ax_max_occ)
@@ -1329,35 +1355,53 @@ seed = [[-8615404,  1149694,  9191470],
 #seeds = [5386811, 9035970, 6604982]
 #seeds = [5386811, 9035970, 7696218]
 #seeds = [5386811, 9035970, 2986770]
-#seeds = [5386811, 1452796, 7369125]
+#seeds = [5386811, 1452796, 7369125] #extreme short pitch with typical surge
 #seeds = [5386811, 814191, 7027716]
 #seeds = [6488224, 3132820, 12791]
 #seeds = [7703243, 8172981, 3515984]
 #seeds = [6488224, 1071707, 1788736]
-#seeds = [6488224, 6949255, 1107037]
-#seeds = [9320476, 1209962, 455463]
-seeds = [6488224, 7912469, 8846190]
-seeds = [6488224, 7050420, 6150340]
-seeds = [8337046, 4044790, 4135507]
-seeds = [6488224, 7121293, 7613170]
-seeds = [6285672, 9524948, 5121805]
-seeds = [5514118, 2491094, 6244421]
+#seeds = [6488224, 6949255, 1107037] #extreme 12m surge with large pitch
+#seeds = [9320476, 1209962, 455463] #used in paper, pitch threshold
+#seeds = [6488224, 7912469, 8846190]
+seeds = [6488224, 7050420, 6150340] #used in paper, first selected pitch sample
+#seeds = [8337046, 4044790, 4135507]
+#seeds = [6488224, 7121293, 7613170]
+#seeds = [6285672, 9524948, 5121805]
+#seeds = [5514118, 2491094, 6244421]
 
 # explore surge
 # original surge with 11 m/s
-seeds = [5922703, 7807870, 9240304]
+#seeds = [5922703, 7807870, 9240304]
 # modify U19.5 = 20
 #seeds = [5922703, 7807870, 9240304]
 
 # original with 20m/s
 #seeds = [2836000, 1339842, 6889157]
 #seeds = [1785999, 1854122, 8235867]
-seeds = [5563693, 5004676, 9608067]
+#seeds = [5563693, 5004676, 9608067]
 
 # more than 10 surge
-seeds = [372690, 8343741, 5323847]
-seeds = [7951375, 1141030, 3022793]
-seeds = [8734247, 7239128, 3868119]
+#seeds = [372690, 8343741, 5323847]
+#seeds = [7951375, 1141030, 3022793]
+#seeds = [8734247, 7239128, 3868119]
+#seeds = [1991645, 2975368, 9254228] #used in paper
+
+# less than 7 surge
+#seeds = [762076, 7969102, 6101757] #used in paper
+#seeds = [2800585, 8579925, 9172994]
+#seeds = [1078761, 3577871, 1303484]
+#seeds = [8156069, 828949, 4705714]
+
+
+seed = [[922805, 154620, 1903695],
+[3947181, 9086885, 2744044],
+[4850752, 8013470, 8212820],
+[8342866, 4985946, 5799695],
+[962673, 3701372, 218738],
+[4934514, 5831442, 9121865]]
+
+seeds = [10480, 223607, 3861715]
+seeds = [1078761, 3577871, 1303484]
 
 reproduce_save_driver(seeds)
 
