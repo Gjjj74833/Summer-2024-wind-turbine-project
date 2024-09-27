@@ -810,8 +810,8 @@ def rk4(Betti, x0, t0, tf, dt, beta_0, T_E, Cp_type, performance, v_w, v_wind, s
             beta = 0
             integral = 0
         else:
-            new_T_E = 43093.55
-            #new_T_E = 5296610 / (97*omega_R)
+            #new_T_E = 43093.55
+            new_T_E = 5296610 / (97*omega_R)
         if new_T_E < 0:
             new_T_E = 0
         
@@ -1003,7 +1003,7 @@ def reproduce_save_driver(seeds):
 
 
     v_w = 11
-    end_time = 1500 #end_time < 3000
+    end_time = 1500 
     
     seeds_wind = seeds[:2]
     seed_wave = seeds[2]
@@ -1046,14 +1046,14 @@ def load_data(seeds):
     
     # Extracting the data
     t = data['t'][:-1]#[:-1000]
-    state = data['x'][:-1]#[:-1000]
-    beta = np.rad2deg(data['betas'])#[:-1000]
+    state = data['x'][:-1]#[1000:]#[:-1000]
+    beta = np.rad2deg(data['betas'])#[1000:]#[:-1000]
     x = data['x'][:-1]#[:-1000]
-    wind_speed = data['v_wind'][:-1]#[:-1000]
-    wave_eta = data['wave_eta'][:-1]#[:-1000]
-    T_E = data['T_E'][:-1]#[:-1000]
-    P_A = data['P_A'][:-1]#[:-1000]
-    FA = data['FA'][:-1]
+    wind_speed = data['v_wind'][:-1]#[1000:]#[:-1000]
+    wave_eta = data['wave_eta'][:-1]#[1000:]#[:-1000]
+    T_E = data['T_E'][:-1]#[1000:]#[:-1000]
+    P_A = data['P_A'][:-1]#[1000:]#[:-1000]
+    FA = data['FA'][:-1]#[1000:]
     data.close()
     print(np.std(state[:,4]))
     print(np.max(state[:,0]))
@@ -1065,7 +1065,6 @@ def load_data(seeds):
     pitch_acceleration = np.concatenate((pitch_acceleration, last_acceleration), axis=0)[:, None] 
     state = np.concatenate((x[:, :6], pitch_acceleration), axis=1)
     '''
-                        
                            
     # Extracting percentile data
     percentile_file_path = 'reproduced_results/percentile_extreme.npz'
@@ -1095,7 +1094,37 @@ def load_data(seeds):
 
     
     def plot_helper(ax):
+        """
+        #plot drivetrain properties
+        ax[0].plot(t, state[:, 6][1000:], color='black', linewidth=0.5)
+        ax[0].set_xlabel('Time (s)', fontsize=12)
+        ax[0].set_title('Rotor Speed (rpm)', fontsize=15)
+        ax[0].tick_params(axis='both', labelsize=16) 
+        ax[0].grid(True)
+        ax[0].set_xlim(0, t[-1])
         
+        ax[1].plot(t, beta[1000:], color='black', linewidth=0.5)
+        ax[1].set_xlabel('Time (s)', fontsize=12)
+        ax[1].set_title('Blade Pitch Angle (deg)', fontsize=15)
+        ax[1].tick_params(axis='both', labelsize=16) 
+        ax[1].grid(True)
+        ax[1].set_xlim(0, t[-1])
+        
+        ax[2].plot(t, T_E[1000:]/1000, color='black', linewidth=0.5)
+        ax[2].set_xlabel('Time (s)', fontsize=12)
+        ax[2].set_title('Generator Torque (kN*m)', fontsize=15)
+        ax[2].tick_params(axis='both', labelsize=16) 
+        ax[2].grid(True)
+        ax[2].set_xlim(0, t[-1])
+        
+        ax[3].plot(t, P_A[1000:]/1000000, color='black', linewidth=0.5)
+        ax[3].set_xlabel('Time (s)', fontsize=12)
+        ax[3].set_title('Generator Power (MW)', fontsize=15)
+        ax[3].tick_params(axis='both', labelsize=16) 
+        ax[3].grid(True)
+        ax[3].set_xlim(0, t[-1])
+        
+        """
         # plot wind
         ax[0].plot(t, wind_speed, color='black', linewidth=0.5)
         ax[0].set_xlabel('Time (s)', fontsize=12)
@@ -1225,6 +1254,7 @@ def load_data(seeds):
         
         ax[12].legend(handles=legend_elements, loc='center', fontsize=25)
         '''
+        
     
     # for 8 states including pitch acceleration:
 
@@ -1330,7 +1360,7 @@ def plot_fft(wave_eta, t):
 #seeds = [7257660, 8624413, 1054020]
 
 # long pitch 1
-seeds = [8572651, 3981393, 1062997]
+#seeds = [8572651, 3981393, 1062997]
 
 # long pitch 2
 #seeds = [5050752, 123657, 2779289]
@@ -1378,7 +1408,7 @@ seed = [[-8615404,  1149694,  9191470],
 # original with 20m/s
 #seeds = [2836000, 1339842, 6889157]
 #seeds = [1785999, 1854122, 8235867]
-#seeds = [5563693, 5004676, 9608067]
+seeds = [5563693, 5004676, 9608067]
 
 # more than 10 surge
 #seeds = [372690, 8343741, 5323847]
@@ -1408,12 +1438,33 @@ seed = [[922805, 154620, 1903695],
 #seeds = [4021713, 438654, 7364167]# max = 11.586424396516644, min = -3.6224436525623807 #used in paper, sample 1
 #seeds = [4228930, 1073420, 3900189]# max = 11.303034674068728, min = -4.302383755726724
 #seeds = [8041419, 6395083, 7403041]# max = 10.681752955114138, min = -3.330092277208749 #sample 2
-seeds = [6488224, 6949255, 1107037] #sample 3
+#seeds = [6488224, 6949255, 1107037] #sample 3
 #seeds = [9141186, 8363993, 7274232]# max = 11.021492510519272, min = -3.365981562004628 #sample 4
 #seeds = [8734247, 7239128, 3868119]# max = 10.9151542615136, min = -2.6573876455719563 #sample 5
-seeds = [645668, 13, 489]
 
-reproduce_save_driver(seeds)
+
+#seeds = [1896255, 1015532, 4410486]# max = 12.16769929445925, min = -2.2355361935741507
+#seeds = [8821190, 867516, 7892379]# max = 12.601436557299419, min = -3.498792394643042
+#seeds = [372690, 8343741, 5323847]# max = 11.046225083596012, min = -2.094741565821977
+#seeds = [2401130, 6248691, 6889489]# max = 11.729656954180479, min = -3.9191614288386765
+#seeds = [8696505, 7371200, 2058606]# max = 10.11526752925958 exceeds upper bound 10
+
+#[8696505, 7371200, 2058606], max = 10.11526752925958 exceeds upper bound 10
+#[2514970, 4864648, 4660082], max = 10.136452696484712 exceeds upper bound 10
+#[8041419, 6395083, 7403041], max = 10.681752955114138 exceeds upper bound 10
+#[8734247, 7239128, 3868119], max = 10.9151542615136 exceeds upper bound 10
+#[563415, 1798911, 1881952], max = 10.286428697658955 exceeds upper bound 10
+#[8722005, 5660044, 2277851], max = 10.274664930063224 exceeds upper bound 10
+#[8086850, 1693151, 7953215], max = 10.1593921391391 exceeds upper bound 10
+#[8399725, 6181345, 5697923], max = 10.251957909940119 exceeds upper bound 10
+#[1106191, 3818054, 7101916], max = 10.462376035598137 exceeds upper bound 10
+#[1991645, 2975368, 9254228], max = 10.391702810710646 exceeds upper bound 10
+#[830830, 4959547, 913763], max = 10.690857488493712 exceeds upper bound 10
+#[1885232, 1551231, 5444248], max = 10.31035536733722 exceeds upper bound 10
+#[9141186, 8363993, 7274232], max = 11.021492510519272 exceeds upper bound 10
+#[2876421, 7876093, 1576493], max = 10.377149705544724 exceeds upper bound 10
+#[1860654, 1480927, 4263866], max = 10.480879317256912 exceeds upper bound 10
+#reproduce_save_driver(seeds)
 
 
 

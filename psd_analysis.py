@@ -47,7 +47,15 @@ def load_data(seeds):
     data.close()
     
     return state, wind_speed, wave_eta
-    
+
+
+seeds_11 = [5922703, 7807870, 9240304]
+state, wind_speed, wave_eta = load_data(seeds_11)
+frequencies_wind, psd = plot_psd(wind_speed)
+frequencies_surge, psd_1 = plot_psd(state[:, 0])
+frequencies_wave, psd_2 = plot_psd(wave_eta)
+
+'''
 #11 m/s
 seeds_11 = [5922703, 7807870, 9240304]
 
@@ -74,6 +82,9 @@ f_surge_11, psd_surge_11 = plot_psd(state_11[:, 0], 0.5)
 f_wind_20, psd_wind_20 = plot_psd(wind_20, 0.5)
 f_wave_20, psd_wave_20 = plot_psd(wave_20, 0.5)
 f_surge_20, psd_surge_20 = plot_psd(state_20[:, 0], 0.5)
+'''
+#############################################################################
+
 
 def load_psd_percentiles(file_name):
     """
@@ -96,6 +107,63 @@ def load_psd_percentiles(file_name):
         'p62_5': data['p62_5']
     }
 
+def plot_psd_with_percentiles(ax, frequencies, median, p12_5, p87_5, p37_5, p62_5, label, color):
+    ax.semilogy(frequencies, median, label=label, color=color)
+    ax.fill_between(frequencies, p12_5, p87_5, color=color, alpha=0.3)
+    ax.fill_between(frequencies, p37_5, p62_5, color=color, alpha=0.5)
+    ax.set_xlabel('Frequency (Hz)')
+    ax.set_ylabel('Power/Frequency (dB/Hz)')
+    ax.set_xscale('log')
+    ax.grid(True)
+    
+'''
+
+psd_wind_MCMC = load_psd_percentiles("psd/wind_MCMC.npz")
+psd_wind_pi0 = load_psd_percentiles("psd/wind_pi0.npz")
+psd_wind_extreme = load_psd_percentiles("psd/wind_extreme.npz")
+
+psd_wave_MCMC = load_psd_percentiles("psd/wave_MCMC.npz")
+psd_wave_pi0 = load_psd_percentiles("psd/wave_pi0.npz")
+psd_wave_extreme = load_psd_percentiles("psd/wave_extreme.npz")
+
+psd_surge_MCMC = load_psd_percentiles("psd/surge_MCMC.npz")
+psd_surge_pi0 = load_psd_percentiles("psd/surge_pi0.npz")
+psd_surge_extreme = load_psd_percentiles("psd/surge_extreme.npz")
+
+fig, axs = plt.subplots(1, 3, figsize=(15, 4))
+
+# Create a dummy plot for the legend
+dummy_median = axs[0].plot([], [], label='Median', color='black', linestyle='-')
+dummy_central_25 = axs[0].fill_between([], [], [], color='black', alpha=0.5, label='Central 25%')
+dummy_75_percentile = axs[0].fill_between([], [], [], color='black', alpha=0.3, label='Central 75%')
+
+# Plot PSD of Wind for MCMC, pi0, and Extreme
+plot_psd_with_percentiles(axs[0], frequencies_wind, psd_wind_MCMC['median'], psd_wind_MCMC['p12_5'], psd_wind_MCMC['p87_5'], psd_wind_MCMC['p37_5'], psd_wind_MCMC['p62_5'], 'Standard MCMC', 'blue')
+plot_psd_with_percentiles(axs[0], frequencies_wind, psd_wind_pi0['median'], psd_wind_pi0['p12_5'], psd_wind_pi0['p87_5'], psd_wind_pi0['p37_5'], psd_wind_pi0['p62_5'], r'IMPS $\epsilon=0$', 'green')
+plot_psd_with_percentiles(axs[0], frequencies_wind, psd_wind_extreme['median'], psd_wind_extreme['p12_5'], psd_wind_extreme['p87_5'], psd_wind_extreme['p37_5'], psd_wind_extreme['p62_5'], 'Extreme Surge > 9m', 'red')
+axs[0].set_title('PSD of Wind')
+axs[0].legend()
+
+# Plot PSD of Wave for MCMC, pi0, and Extreme
+plot_psd_with_percentiles(axs[1], frequencies_wave, psd_wave_MCMC['median'], psd_wave_MCMC['p12_5'], psd_wave_MCMC['p87_5'], psd_wave_MCMC['p37_5'], psd_wave_MCMC['p62_5'], 'Wave MCMC', 'blue')
+plot_psd_with_percentiles(axs[1], frequencies_wave, psd_wave_pi0['median'], psd_wave_pi0['p12_5'], psd_wave_pi0['p87_5'], psd_wave_pi0['p37_5'], psd_wave_pi0['p62_5'], 'Wave pi0', 'green')
+plot_psd_with_percentiles(axs[1], frequencies_wave, psd_wave_extreme['median'], psd_wave_extreme['p12_5'], psd_wave_extreme['p87_5'], psd_wave_extreme['p37_5'], psd_wave_extreme['p62_5'], 'Wave Extreme', 'red')
+axs[1].set_title('PSD of Wave')
+#axs[1].legend()
+
+# Plot PSD of Surge for MCMC, pi0, and Extreme
+plot_psd_with_percentiles(axs[2], frequencies_surge, psd_surge_MCMC['median'], psd_surge_MCMC['p12_5'], psd_surge_MCMC['p87_5'], psd_surge_MCMC['p37_5'], psd_surge_MCMC['p62_5'], 'Surge MCMC', 'blue')
+plot_psd_with_percentiles(axs[2], frequencies_surge, psd_surge_pi0['median'], psd_surge_pi0['p12_5'], psd_surge_pi0['p87_5'], psd_surge_pi0['p37_5'], psd_surge_pi0['p62_5'], 'Surge pi0', 'green')
+plot_psd_with_percentiles(axs[2], frequencies_surge, psd_surge_extreme['median'], psd_surge_extreme['p12_5'], psd_surge_extreme['p87_5'], psd_surge_extreme['p37_5'], psd_surge_extreme['p62_5'], 'Surge Extreme', 'red')
+axs[2].set_title('PSD of Surge')
+#axs[2].legend()
+
+# Adjust layout
+plt.tight_layout()
+plt.show()
+
+'''
+fig, axs = plt.subplots(1, 3, figsize=(15, 4))
 # Load the PSD percentiles for each category
 psd_wind_0_10 = load_psd_percentiles("psd_parallel/wind_0_10.npz")
 psd_wind_20 = load_psd_percentiles("psd_parallel/wind_20.npz")
@@ -106,43 +174,37 @@ psd_wave_20 = load_psd_percentiles("psd_parallel/wave_20.npz")
 psd_surge_0_10 = load_psd_percentiles("psd_parallel/surge_0_10.npz")
 psd_surge_20 = load_psd_percentiles("psd_parallel/surge_20.npz")
 
-fig, axs = plt.subplots(1, 3, figsize=(15, 4))
-
-def plot_psd_with_percentiles(ax, frequencies, median, p12_5, p87_5, p37_5, p62_5, label, color):
-    ax.semilogy(frequencies, median, label=label, color=color)
-    ax.fill_between(frequencies, p12_5, p87_5, color=color, alpha=0.3)
-    ax.fill_between(frequencies, p37_5, p62_5, color=color, alpha=0.5)
-    ax.set_xlabel('Frequency (Hz)')
-    ax.set_ylabel('Power/Frequency (dB/Hz)')
-    ax.set_xscale('log')
-    ax.grid(True)
-
 
 # Assume that the frequencies are the same for all PSDs
-frequencies = np.linspace(0.001, 1, len(psd_wind_0_10['median']))  # Replace with actual frequencies
+#frequencies = np.linspace(0.001, 1, len(psd_wind_0_10['median']))  # Replace with actual frequencies
 
 # Create subplots
 
+# Create a dummy plot for the legend
+dummy_median = axs[0].plot([], [], label='Median', color='black', linestyle='-')
+dummy_central_25 = axs[0].fill_between([], [], [], color='black', alpha=0.5, label='Central 25%')
+dummy_75_percentile = axs[0].fill_between([], [], [], color='black', alpha=0.3, label='Central 75%')
+
 # Plot PSD of Wind
-plot_psd_with_percentiles(axs[0], frequencies, psd_wind_0_10['median'], psd_wind_0_10['p12_5'], psd_wind_0_10['p87_5'], psd_wind_0_10['p37_5'], psd_wind_0_10['p62_5'], 'Wind Speed < 10 m/s', 'blue')
-plot_psd_with_percentiles(axs[0], frequencies, psd_wind_20['median'], psd_wind_20['p12_5'], psd_wind_20['p87_5'], psd_wind_20['p37_5'], psd_wind_20['p62_5'], 'Wind Speed > 20 m/s', 'red')
+plot_psd_with_percentiles(axs[0], frequencies_wind, psd_wind_0_10['median'], psd_wind_0_10['p12_5'], psd_wind_0_10['p87_5'], psd_wind_0_10['p37_5'], psd_wind_0_10['p62_5'], 'Mean wind speed < 12 m/s', 'blue')
+plot_psd_with_percentiles(axs[0], frequencies_wind, psd_wind_20['median'], psd_wind_20['p12_5'], psd_wind_20['p87_5'], psd_wind_20['p37_5'], psd_wind_20['p62_5'], 'Mean wind speed > 12 m/s', 'red')
 axs[0].set_title('PSD of Wind')
-axs[0].plot(f_wind_large, psd_wind_large, color='black', label='Extreme Surge')
+#ax[0].plot(f_wind_large, psd_wind_large, color='black', label='Extreme Surge')
 axs[0].legend()
 
 # Plot PSD of Wave
-plot_psd_with_percentiles(axs[1], frequencies, psd_wave_0_10['median'], psd_wave_0_10['p12_5'], psd_wave_0_10['p87_5'], psd_wave_0_10['p37_5'], psd_wave_0_10['p62_5'], 'Wind Speed < 10 m/s', 'blue')
-plot_psd_with_percentiles(axs[1], frequencies, psd_wave_20['median'], psd_wave_20['p12_5'], psd_wave_20['p87_5'], psd_wave_20['p37_5'], psd_wave_20['p62_5'], 'Wind Speed > 20 m/s', 'red')
+plot_psd_with_percentiles(axs[1], frequencies_wave, psd_wave_0_10['median'], psd_wave_0_10['p12_5'], psd_wave_0_10['p87_5'], psd_wave_0_10['p37_5'], psd_wave_0_10['p62_5'], 'Wind Speed < 10 m/s', 'blue')
+plot_psd_with_percentiles(axs[1], frequencies_wave, psd_wave_20['median'], psd_wave_20['p12_5'], psd_wave_20['p87_5'], psd_wave_20['p37_5'], psd_wave_20['p62_5'], 'Wind Speed > 20 m/s', 'red')
 axs[1].set_title('PSD of Wave')
-axs[1].plot(f_wave_large, psd_wave_large, color='black')
-axs[1].legend()
+#axs[1].plot(f_wave_large, psd_wave_large, color='black')
+#axs[1].legend()
 
 # Plot PSD of Surge
-plot_psd_with_percentiles(axs[2], frequencies, psd_surge_0_10['median'], psd_surge_0_10['p12_5'], psd_surge_0_10['p87_5'], psd_surge_0_10['p37_5'], psd_surge_0_10['p62_5'], 'Wind Speed < 10 m/s', 'blue')
-plot_psd_with_percentiles(axs[2], frequencies, psd_surge_20['median'], psd_surge_20['p12_5'], psd_surge_20['p87_5'], psd_surge_20['p37_5'], psd_surge_20['p62_5'], 'Wind Speed > 20 m/s', 'red')
+plot_psd_with_percentiles(axs[2], frequencies_surge, psd_surge_0_10['median'], psd_surge_0_10['p12_5'], psd_surge_0_10['p87_5'], psd_surge_0_10['p37_5'], psd_surge_0_10['p62_5'], 'Wind Speed < 10 m/s', 'blue')
+plot_psd_with_percentiles(axs[2], frequencies_surge, psd_surge_20['median'], psd_surge_20['p12_5'], psd_surge_20['p87_5'], psd_surge_20['p37_5'], psd_surge_20['p62_5'], 'Wind Speed > 20 m/s', 'red')
 axs[2].set_title('PSD of Surge')
-axs[2].plot(f_surge_large, psd_surge_large, color='black')
-axs[2].legend()
+#axs[2].plot(f_surge_large, psd_surge_large, color='black')
+#axs[2].legend()
 
 # Adjust layout
 plt.tight_layout()

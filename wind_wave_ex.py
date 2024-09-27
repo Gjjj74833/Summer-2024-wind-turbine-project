@@ -82,8 +82,8 @@ T_s = 1  # Time step in seconds
 
 # Generate white noise for each segment
 import random
-seeds = [random.randint(0, 9999999) for _ in range(3)]
-#seeds = [3348203, 8879543, 6120326]
+#seeds = [random.randint(0, 9999999) for _ in range(3)]
+seeds = [3348203, 8879543, 6120326]
 # Print the list of random numbers
 print(seeds)
 # generate medium long component noise use the first seed

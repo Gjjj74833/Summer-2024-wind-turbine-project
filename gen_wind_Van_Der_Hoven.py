@@ -234,8 +234,8 @@ def generate_wind(v_bar, L, k_sigma_v, T_s, T_s1, T_F, white_noise_ml, white_noi
 
 # Parameters
 T_s1 = 180  # Sampling period (seconds)
-T_total = 1000  # Total simulation time (seconds)
-v_bar = 20  # Mean wind speed (m/s)
+T_total = 2000  # Total simulation time (seconds)
+v_bar = 11  # Mean wind speed (m/s)
 
 L = 180  # Turbulence length scale in meters
 k_sigma_v = 0.13 # Slope parameter
@@ -244,7 +244,7 @@ T_s = 1  # Time step in seconds
 # Generate white noise for each segment
 import random
 seeds = [random.randint(0, 9999999) for _ in range(3)]
-#seeds = [6668902, 7679329, 3083145]
+seeds = [8572651, 3981393, 1062997]
 # Print the list of random numbers
 print(seeds)
 # generate medium long component noise use the first seed
