@@ -598,7 +598,7 @@ def structure(x_1, beta, omega_R, t, Cp_type, performance, v_w, v_aveg, random_p
     
     #avegQ_t = np.sqrt(Qt_zeta**2+Qt_eta**2)/8
 
-    return np.linalg.inv(E) @ F, v_in, Cp, h_wave - h, FA
+    return np.linalg.inv(E) @ F, v_in, Cp, h_wave - h, FA, [f_1, f_2, f_3/2]
 
 
 
@@ -682,11 +682,11 @@ def Betti(x, t, beta, T_E, Cp_type, performance, v_w, v_aveg, random_phases):
     x1 = x[:6]
     omega_R = x[6]
     
-    dx1dt, v_in, Cp, h_wave, FA = structure(x1, beta, omega_R, t, Cp_type, performance, v_w, v_aveg, random_phases)
+    dx1dt, v_in, Cp, h_wave, FA, rope_tension = structure(x1, beta, omega_R, t, Cp_type, performance, v_w, v_aveg, random_phases)
     dx2dt = WindTurbine(omega_R, v_in, beta, T_E, t, Cp)
     dxdt = np.append(dx1dt, dx2dt)
 
-    return dxdt, h_wave, FA
+    return dxdt, h_wave, FA, rope_tension
 
 
 def rk4(Betti, x0, t0, tf, dt, beta_0, T_E, Cp_type, performance, v_w, v_wind, seed_wave, v_ml, T_s1):
@@ -884,10 +884,11 @@ def rk4(Betti, x0, t0, tf, dt, beta_0, T_E, Cp_type, performance, v_w, v_wind, s
     T_E_list = []
     P_A_list = []
     FA_list = []
+    rope_tension_list = []
     for i in range(n - 1):
         betas.append(beta)
         v_average_ml = v_ml[i // int((T_s1 / dt))]
-        k1, h_wave, FA = Betti(x[i], t[i], beta, T_E, Cp_type, performance, v_wind[i],  v_average_ml, random_phases)
+        k1, h_wave, FA, rope_tension = Betti(x[i], t[i], beta, T_E, Cp_type, performance, v_wind[i],  v_average_ml, random_phases)
         k2 = Betti(x[i] + 0.5 * dt * k1, t[i] + 0.5 * dt, beta, T_E, Cp_type, performance, v_wind[i],  v_average_ml, random_phases)[0]
         k3 = Betti(x[i] + 0.5 * dt * k2, t[i] + 0.5 * dt, beta, T_E, Cp_type, performance, v_wind[i],  v_average_ml, random_phases)[0]
         k4 = Betti(x[i] + dt * k3, t[i] + dt, beta, T_E, Cp_type, performance, v_wind[i],  v_average_ml, random_phases)[0]
@@ -900,11 +901,13 @@ def rk4(Betti, x0, t0, tf, dt, beta_0, T_E, Cp_type, performance, v_w, v_wind, s
         T_E_list.append(T_E)
         P_A_list.append(T_E*97*x[i][6])
         FA_list.append(FA/1000)
+        rope_tension_list.append(rope_tension)
         
     T_E_list.append(T_E_list[-1])
     P_A_list.append(P_A_list[-1])
     wave_eta.append(wave_eta[-1])
     FA_list.append(FA_list[-1])
+    rope_tension_list.append(rope_tension_list[-1])
     
     
     x[:, 4] = -np.rad2deg(x[:, 4])
@@ -934,8 +937,9 @@ def rk4(Betti, x0, t0, tf, dt, beta_0, T_E, Cp_type, performance, v_w, v_wind, s
     T_E_list_sub = T_E_list[::steps]#[discard_steps:]
     P_A_list_sub = P_A_list[::steps]#[discard_steps:]
     FA_list_sub = FA_list[::steps]
+    rope_tension_list_sub =  rope_tension_list[::steps]
     
-    return t_sub-t_sub[0], x_sub, v_wind_sub, wave_eta_sub, betas_sub, T_E_list_sub, P_A_list_sub, FA_list_sub
+    return t_sub-t_sub[0], x_sub, v_wind_sub, wave_eta_sub, betas_sub, T_E_list_sub, P_A_list_sub, FA_list_sub, rope_tension_list_sub
 
 
 def main(end_time, v_w, x0, seeds_wind, seed_wave, time_step = 0.05, Cp_type = 0, T_s1 = 180):
@@ -991,10 +995,10 @@ def main(end_time, v_w, x0, seeds_wind, seed_wave, time_step = 0.05, Cp_type = 0
     #v_wind = np.load(f'reproduced_results/turbsim_output/{seeds[0]}_{seeds[1]}.npy')
     # modify this to change run time and step size
     #[Betti, x0 (initial condition), start time, end time, time step, beta, T_E]
-    t, x, v_wind, wave_eta, betas, T_E, P_A, FA = rk4(Betti, x0, start_time, end_time, time_step, 0.32, 43093.55, Cp_type, performance, v_w, v_wind, seed_wave, v_ml, T_s1)
+    t, x, v_wind, wave_eta, betas, T_E, P_A, FA, rope_tension = rk4(Betti, x0, start_time, end_time, time_step, 0.32, 43093.55, Cp_type, performance, v_w, v_wind, seed_wave, v_ml, T_s1)
 
     # return the output to be ploted
-    return t, x, v_wind, wave_eta, betas, T_E, P_A, FA
+    return t, x, v_wind, wave_eta, betas, T_E, P_A, FA, rope_tension
 
 
 
@@ -1007,7 +1011,7 @@ def reproduce_save_driver(seeds):
     
     seeds_wind = seeds[:2]
     seed_wave = seeds[2]
-    
+
     
     x0 = np.array([-2.61426271, 
                      -0.00299848190, 
@@ -1016,7 +1020,7 @@ def reproduce_save_driver(seeds):
                      0.00147344971, 
                      -0.000391112846, 
                      1.26855822])
-    t, x, v_wind, wave_eta, betas, T_E, P_A, FA = main(end_time, v_w, x0, seeds_wind, seed_wave)
+    t, x, v_wind, wave_eta, betas, T_E, P_A, FA, rope_tension = main(end_time, v_w, x0, seeds_wind, seed_wave)
     end_time -= 500
     
     np.savez(f'reproduced_results/data/{seeds[0]}_{seeds[1]}_{seeds[2]}.npz', 
@@ -1027,7 +1031,8 @@ def reproduce_save_driver(seeds):
                                                     betas=betas,
                                                     T_E=T_E,
                                                     P_A=P_A,
-                                                    FA=FA)
+                                                    FA=FA,
+                                                    rope_tension=rope_tension)
     
 
 #####################################################################################
@@ -1054,9 +1059,12 @@ def load_data(seeds):
     T_E = data['T_E'][:-1]#[1000:]#[:-1000]
     P_A = data['P_A'][:-1]#[1000:]#[:-1000]
     FA = data['FA'][:-1]#[1000:]
+    #rope_tension = data['rope_tension'][:-1]
     data.close()
     print(np.std(state[:,4]))
-    print(np.max(state[:,0]))
+    #print(np.max(state[:,0]))
+    #print(rope_tension.shape)
+    #print(np.max(rope_tension[:, 0]), np.argmax(rope_tension[:, 0]))
     
     '''
     pitch_rate = x[:, 5]  
@@ -1393,7 +1401,7 @@ seed = [[-8615404,  1149694,  9191470],
 #seeds = [6488224, 6949255, 1107037] #extreme 12m surge with large pitch
 #seeds = [9320476, 1209962, 455463] #used in paper, pitch threshold
 #seeds = [6488224, 7912469, 8846190]
-#seeds = [6488224, 7050420, 6150340] #used in paper, first selected pitch sample
+seeds = [6488224, 7050420, 6150340] #used in paper, first selected pitch sample
 #seeds = [8337046, 4044790, 4135507]
 #seeds = [6488224, 7121293, 7613170]
 #seeds = [6285672, 9524948, 5121805]
@@ -1408,7 +1416,7 @@ seed = [[-8615404,  1149694,  9191470],
 # original with 20m/s
 #seeds = [2836000, 1339842, 6889157]
 #seeds = [1785999, 1854122, 8235867]
-seeds = [5563693, 5004676, 9608067]
+#seeds = [5563693, 5004676, 9608067]
 
 # more than 10 surge
 #seeds = [372690, 8343741, 5323847]
@@ -1464,6 +1472,12 @@ seed = [[922805, 154620, 1903695],
 #[9141186, 8363993, 7274232], max = 11.021492510519272 exceeds upper bound 10
 #[2876421, 7876093, 1576493], max = 10.377149705544724 exceeds upper bound 10
 #[1860654, 1480927, 4263866], max = 10.480879317256912 exceeds upper bound 10
+
+
+#For tension 
+#seeds = [9365099, 8453773, 6186813]
+#seeds = [1526308, 8751176, 9334364]
+
 #reproduce_save_driver(seeds)
 
 
