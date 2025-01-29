@@ -1421,7 +1421,7 @@ seeds = [6488224, 7050420, 6150340] #used in paper, first selected pitch sample
 # more than 10 surge
 #seeds = [372690, 8343741, 5323847]
 #seeds = [7951375, 1141030, 3022793]
-#seeds = [8734247, 7239128, 3868119]
+seeds = [8734247, 7239128, 3868119]
 #seeds = [1991645, 2975368, 9254228] 
 
 # less than 7 surge
